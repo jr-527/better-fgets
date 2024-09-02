@@ -144,13 +144,13 @@ key_T nextkey() {
     while (1) {
         if (poll(&pfd, 1, 0) > 0) {
             int n = read(0, buf, sizeof(buf));
+            disable_quiet_input();
             if (n == 0) {
                 return -1;
             }
             if (n == 1) {
                 return buf[0]; // ASCII character
             }
-            disable_quiet_input();
             return code_lookup(buf, n);
         }
     }
