@@ -214,7 +214,6 @@ void print_history() {
 int type_line_helper(Buffer* left, Buffer* right, char out_buf[]) {
     buffer_from_str(left, "");
     buffer_from_str(right, "");
-    enable_quiet_input();
     reset_tmp_hist();
     int tmp_hist_available = 0;
     while (1) {
@@ -344,24 +343,21 @@ int type_line(char out[]) {
     int return_code = type_line_helper(&left, &right, out_buf);
     if (return_code == -2) {
         //fprintf(stderr, "\nError: could not recognize key\n");
-        disable_quiet_input();
         return -2;
     } else if (return_code == -1) {
         //fprintf(stderr, "\nError: buffer full\n");
-        disable_quiet_input();
         return -1;
     }
     //fprintf(stderr, "\n");
     int n = buffer_to_string(&left, out);
     buffer_to_string(&right, out+n);
-    disable_quiet_input();
     return return_code;
 }
 
+#if __INCLUDE_LEVEL__ == 0
 int main() {
     //struct pollfd pfd = { .fd=0, .events=POLLIN };
     //type_line(pfd);
-    init();
     char b[1024];
     while (type_line(b) >= 0) {
         printf("type_line output: \"%s\"\n", b);
@@ -369,3 +365,4 @@ int main() {
     //printf("\n");
     return 0;
 }
+#endif

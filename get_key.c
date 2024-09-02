@@ -18,10 +18,14 @@ char out_buf[2048];
 
 struct pollfd pfd;
 
+int initialized = 0;
+
 void init() {
-    pfd.fd = 0;
-    pfd.events=POLLIN;
-    //= { .fd=0, .events=POLLIN };
+    if (!initialized) {
+        pfd.fd = 0;
+        pfd.events=POLLIN;
+        //= { .fd=0, .events=POLLIN };
+    }
 }
 
 void enable_quiet_input() {
@@ -131,10 +135,12 @@ key_T code_lookup(char str[], int len) {
 }
 
 key_T nextkey() {
+    init();
     char buf[8];
     for (uint32_t i = 0; i < sizeof(buf); i++) {
         buf[i] = 0;
     }
+    enable_quiet_input();
     while (1) {
         if (poll(&pfd, 1, 0) > 0) {
             int n = read(0, buf, sizeof(buf));
@@ -147,13 +153,10 @@ key_T nextkey() {
             return code_lookup(buf, n);
         }
     }
+    disable_quiet_input();
 }
 
 #elif defined(_WIN32)
-
-void init() { } // These three aren't needed in Windows
-void enable_quiet_input() { }
-void disable_quiet_input() { }
 
 key_T code_lookup(int x) {
     // converts MS scan codes into standardized stuff
