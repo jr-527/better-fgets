@@ -240,14 +240,16 @@ int type_line_helper(Buffer* left, Buffer* right, char out_buf[]) {
             latest_line();
             fprintf(stderr, "\n");
             return 0;
-        } else if (k == 27) { // escape
-            buffer_from_str(left, "");
-            buffer_from_str(right, "");
-            #pragma GCC diagnostic push
-            #pragma GCC diagnostic ignored "-Wformat-zero-length"
-            update("");
-            #pragma GCC diagnostic pop
-            return 0;
+        } else if (k >= 0) {
+            // do nothing
+        // } else if (k == 27) { // escape
+        //     buffer_from_str(left, "");
+        //     buffer_from_str(right, "");
+        //     #pragma GCC diagnostic push
+        //     #pragma GCC diagnostic ignored "-Wformat-zero-length"
+        //     update("");
+        //     #pragma GCC diagnostic pop
+        //     return 0;
         } else if (k < 0) { // non-ASCII key
             if (k == (key_T)LEFT) {
                 if (left->count > 0) {
@@ -357,12 +359,15 @@ int type_line(char out[]) {
 #if __INCLUDE_LEVEL__ == 0
 int main() {
     char b[1024];
-    while (type_line(b) >= 0) {
+    int code;
+    do {
+        code = type_line(b);
         if (b[0] == 'q') {
             return 0;
         }
         printf("type_line output: \"%s\"\n", b);
-    }
+    } while (code >= 0);
+    printf("return code: %d\n", code);
     //printf("\n");
     return 0;
 }
