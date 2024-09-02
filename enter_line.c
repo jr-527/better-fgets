@@ -187,7 +187,7 @@ void reset_tmp_hist() {
     }
 }
 
-void restore_tmp_hist(Buffer* left, Buffer* right) {
+void restore_tmp_hist(Buffer* left) {
     buffer_from_str(left, tmp_hist.line);
 }
 
@@ -306,13 +306,13 @@ int type_line_helper(Buffer* left, Buffer* right, char out_buf[]) {
                     } else if (tmp_hist_available && tmp_hist_exists()) {
                         // printf("  tmp_hist_exists went through\n");
                         tmp_hist_available = 0;
-                        restore_tmp_hist(left, right);
+                        restore_tmp_hist(left);
                         latest_line();
                     }
                 } else if (tmp_hist_available && at_last() && tmp_hist_exists()) {
                     // printf("  restore_tmp_hist\n");
                     tmp_hist_available = 0;
-                    restore_tmp_hist(left, right);
+                    restore_tmp_hist(left);
                     latest_line();
                 }
             }
