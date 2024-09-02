@@ -360,6 +360,10 @@ int main() {
     //type_line(pfd);
     char b[1024];
     while (type_line(b) >= 0) {
+        if (b[0] == 'q') {
+            disable_quiet_input();
+            return 0;
+        }
         printf("type_line output: \"%s\"\n", b);
     }
     //printf("\n");

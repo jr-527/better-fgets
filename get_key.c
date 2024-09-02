@@ -150,10 +150,10 @@ key_T nextkey() {
             if (n == 1) {
                 return buf[0]; // ASCII character
             }
+            disable_quiet_input();
             return code_lookup(buf, n);
         }
     }
-    disable_quiet_input();
 }
 
 #elif defined(_WIN32)
