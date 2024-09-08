@@ -251,7 +251,7 @@ int type_line_helper(Buffer* left, Buffer* right, char out_buf[]) {
         } else if (k == 3) { // interrupt
             fprintf(stderr, "\n");
             return -3;
-        } else if ((k == 4) || (k == 23)) { // eof
+        } else if ((k == 4)) { // eof
             fprintf(stderr, "\n");
             return 0;
         } else if ((k == 10) || (k == 13)) { // enter
@@ -259,151 +259,143 @@ int type_line_helper(Buffer* left, Buffer* right, char out_buf[]) {
             latest_line();
             fprintf(stderr, "\n");
             return 0;
-        } else if (k >= 0) {
-            // do nothing
-        // } else if (k == 27) { // escape
-        //     buffer_from_str(left, "");
-        //     buffer_from_str(right, "");
-        //     #pragma GCC diagnostic push
-        //     #pragma GCC diagnostic ignored "-Wformat-zero-length"
-        //     update("");
-        //     #pragma GCC diagnostic pop
-        //     return 0;
-        } else if (k < 0) { // non-ASCII key
-            if (k == (key_T)LEFT) {
-                if (left->count > 0) {
-                    if (buffer_addleft(right, buffer_popright(left)) == -1) {
-                        fprintf(stderr, "\n");
-                        return -1;
-                    }
-                }
-            } else if (k == (key_T)RIGHT) {
-                if (right->count > 0) {
-                    if (buffer_addright(left, buffer_popleft(right)) == -1) {
-                        fprintf(stderr, "\n");
-                        return -1;
-                    }
-                }
-            } else if (k == (key_T)C_LEFT) {
-                // when doing ctrl+left, we skip any whitespace on the right,
-                // so starting whitespace
-                int group = get_char_group(' ');
-                // skip spaces
-                while (left->count > 0) {
-                    if (get_char_group(buffer_peekright(left)) != group) {
-                        break;
-                    }
-                    if (buffer_addleft(right, buffer_popright(left)) == -1) {
-                        fprintf(stderr, "\n");
-                        return -1;
-                    }
-                }
-                if (left->count <= 0) {
-                    continue;
-                }
-                // then at least 1 more
-                char current = buffer_popright(left);
-                if (buffer_addleft(right, current) == -1) {
+        } else if (k == (key_T)LEFT || k == 2) { // ctrl-b (emacs)
+            if (left->count > 0) {
+                if (buffer_addleft(right, buffer_popright(left)) == -1) {
                     fprintf(stderr, "\n");
                     return -1;
                 }
-                group = get_char_group(current);
-                // then we keep going until we reach a different group
-                while (left->count > 0) {
-                    if (get_char_group(buffer_peekright(left)) != group) {
-                        break;
-                    }
-                    if (buffer_addleft(right, buffer_popright(left)) == -1) {
-                        fprintf(stderr, "\n");
-                        return -1;
-                    }
-                }
-
-            } else if (k == (key_T)C_RIGHT) {
-                if (right->count <= 0) {
-                    continue;
-                }
-                // whenever you press ctrl-right, it always moves at least one
-                // character right unless at the end
-                char current = buffer_popleft(right);
-                if (buffer_addright(left, current) == -1) {
+            }
+        } else if (k == (key_T)RIGHT || k == 6) { // ctrl-f (emacs)
+            if (right->count > 0) {
+                if (buffer_addright(left, buffer_popleft(right)) == -1) {
                     fprintf(stderr, "\n");
                     return -1;
                 }
-                int group = get_char_group(current);
-                // we keep moving to the right until we get to the end of the
-                // current input...
-                while (right->count > 0) {
-                    // ... or until we get to a different type of character.
-                    // If the input is
-                    //     |asdfasdf asdf
-                    // and you press ctrl-right, we move the cursor right
-                    // until the input is
-                    //     asdfasdf| asdf
-                    // current = get_char_group(buffer_peekleft(right));
-                    if (get_char_group(buffer_peekleft(right)) != group) {
-                        break;
-                    }
-                    if (buffer_addright(left, buffer_popleft(right)) == -1) {
-                        fprintf(stderr, "\n");
-                        return -1;
-                    }
+            }
+        } else if (k == (key_T)C_LEFT || k == 23) { // ctrl-w (vim)
+            int add_back = (k == (key_T)C_LEFT);
+            // when doing ctrl+left, we skip any whitespace on the right,
+            // so starting whitespace
+            int group = get_char_group(' ');
+            // skip spaces
+            while (left->count > 0) {
+                if (get_char_group(buffer_peekright(left)) != group) {
+                    break;
                 }
-                // then finally we skip any spaces
-                group = get_char_group(' ');
-                while (right->count > 0) {
-                    if (get_char_group(buffer_peekleft(right)) != group) {
-                        break;
-                    }
-                    if (buffer_addright(left, buffer_popleft(right)) == -1) {
-                        fprintf(stderr, "\n");
-                        return -1;
-                    }
+                char tmp = buffer_popright(left);
+                if (add_back && buffer_addleft(right, tmp) == -1) {
+                    fprintf(stderr, "\n");
+                    return -1;
                 }
-            } else if (k == (key_T)HOME) {
-                while (left->count > 0) {
-                    if (buffer_addleft(right, buffer_popright(left)) == -1) {
-                        fprintf(stderr, "\n");
-                        return -1;
-                    }
+            }
+            if (left->count <= 0) {
+                continue;
+            }
+            // then at least 1 more
+            char current = buffer_popright(left);
+            if (add_back && buffer_addleft(right, current) == -1) {
+                fprintf(stderr, "\n");
+                return -1;
+            }
+            group = get_char_group(current);
+            // then we keep going until we reach a different group
+            while (left->count > 0) {
+                if (get_char_group(buffer_peekright(left)) != group) {
+                    break;
                 }
-            } else if (k == (key_T)END) {
-                while (right->count > 0) {
-                    if (buffer_addright(left, buffer_popleft(right)) == -1) {
-                        fprintf(stderr, "\n");
-                        return -1;
-                    }
+                char tmp = buffer_popright(left);
+                if (add_back && buffer_addleft(right, tmp) == -1) {
+                    fprintf(stderr, "\n");
+                    return -1;
                 }
-            } else if (k == (key_T)DEL) {
-                buffer_popleft(right);
-            } else if (k == (key_T)UP) {
-                if (!prev_line()) {
-                    continue;
+            }
+        } else if (k == (key_T)C_RIGHT) {
+            if (right->count <= 0) {
+                continue;
+            }
+            // whenever you press ctrl-right, it always moves at least one
+            // character right unless at the end
+            char current = buffer_popleft(right);
+            if (buffer_addright(left, current) == -1) {
+                fprintf(stderr, "\n");
+                return -1;
+            }
+            int group = get_char_group(current);
+            // we keep moving to the right until we get to the end of the
+            // current input...
+            while (right->count > 0) {
+                // ... or until we get to a different type of character.
+                // If the input is
+                //     |asdfasdf asdf
+                // and you press ctrl-right, we move the cursor right
+                // until the input is
+                //     asdfasdf| asdf
+                // current = get_char_group(buffer_peekleft(right));
+                if (get_char_group(buffer_peekleft(right)) != group) {
+                    break;
                 }
-                if (at_last()) {
-                    tmp_hist_available = 1;
-                    // printf("  at bottom\n  set_tmp_hist\n  read_hist_line\n");
-                    set_tmp_hist(left, right, out_buf);
+                if (buffer_addright(left, buffer_popleft(right)) == -1) {
+                    fprintf(stderr, "\n");
+                    return -1;
+                }
+            }
+            // then finally we skip any spaces
+            group = get_char_group(' ');
+            while (right->count > 0) {
+                if (get_char_group(buffer_peekleft(right)) != group) {
+                    break;
+                }
+                if (buffer_addright(left, buffer_popleft(right)) == -1) {
+                    fprintf(stderr, "\n");
+                    return -1;
+                }
+            }
+        } else if (k == (key_T)HOME) {
+            while (left->count > 0) {
+                if (buffer_addleft(right, buffer_popright(left)) == -1) {
+                    fprintf(stderr, "\n");
+                    return -1;
+                }
+            }
+        } else if (k == (key_T)END) {
+            while (right->count > 0) {
+                if (buffer_addright(left, buffer_popleft(right)) == -1) {
+                    fprintf(stderr, "\n");
+                    return -1;
+                }
+            }
+        } else if (k == (key_T)DEL) {
+            buffer_popleft(right);
+        } else if (k == (key_T)UP || k == 16) { // ctrl-p (emacs)
+            if (!prev_line()) {
+                continue;
+            }
+            if (at_last()) {
+                tmp_hist_available = 1;
+                // printf("  at bottom\n  set_tmp_hist\n  read_hist_line\n");
+                set_tmp_hist(left, right, out_buf);
+                read_hist_line(left, right);
+            } else {
+                read_hist_line(left, right);
+            }
+        } else if (k == (key_T)DOWN || k == 14) { // ctrl-n (emacs)
+            if (!at_last()) {
+                if (next_line()) {
                     read_hist_line(left, right);
-                } else {
-                    read_hist_line(left, right);
-                }
-            } else if (k == (key_T)DOWN) {
-                if (!at_last()) {
-                    if (next_line()) {
-                        read_hist_line(left, right);
-                    } else if (tmp_hist_available && tmp_hist_exists()) {
-                        tmp_hist_available = 0;
-                        restore_tmp_hist(left);
-                        latest_line();
-                    }
-                } else if (tmp_hist_available && at_last() && tmp_hist_exists()) {
-                    // printf("  restore_tmp_hist\n");
+                } else if (tmp_hist_available && tmp_hist_exists()) {
                     tmp_hist_available = 0;
                     restore_tmp_hist(left);
                     latest_line();
                 }
+            } else if (tmp_hist_available && at_last() && tmp_hist_exists()) {
+                // printf("  restore_tmp_hist\n");
+                tmp_hist_available = 0;
+                restore_tmp_hist(left);
+                latest_line();
             }
+        } else if (k != -1) {
+            // do nothing
         } else {
             //printf(" unknown k: %d\n", k);
             fprintf(stderr, "\n");
@@ -431,15 +423,15 @@ int type_line(char out[]) {
     Buffer right = create_buffer(right_buf, sizeof(right_buf));
     int return_code = type_line_helper(&left, &right, out_buf);
     if (return_code == -2) {
-        //fprintf(stderr, "\nError: could not recognize key\n");
         return -2;
     } else if (return_code == -1) {
-        //fprintf(stderr, "\nError: buffer full\n");
         return -1;
     }
-    //fprintf(stderr, "\n");
     int n = buffer_to_string(&left, out);
     buffer_to_string(&right, out+n);
+    if ((n==2 && !strncmp(":q",out,n)) || (n==3 && !strncmp(":q!",out,n))) {
+        return -3;
+    }
     return return_code;
 }
 
