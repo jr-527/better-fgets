@@ -54,6 +54,10 @@ struct sequence_tup sequences[] = {
     {"[C", RIGHT},
     {"[A", UP},
     {"[B", DOWN},
+    {"[1D", LEFT}, // different codes when used with modifiers
+    {"[1C", RIGHT},
+    {"[1A", UP},
+    {"[1B", DOWN},
     {"[Z", S_TAB},
     {"[2~", INS},
     {"[3~", DEL},
@@ -82,10 +86,7 @@ key_T code_lookup(char str[], int len) {
     str++;
     len--;
     // printf("\ncode_lookup input: (%d), %s\n", len, str);
-    char buf[8];
-    for (uint32_t i = 0; i < sizeof(buf); i++) {
-        buf[i] = 0;
-    }
+    char buf[8] = {0};
     int modifier = 0;
     int i = 0;
     int j = 0;

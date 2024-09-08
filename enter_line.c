@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
 #include "get_key.c"
@@ -204,6 +205,24 @@ void print_history() {
 
 }
 
+// returns a different integer depending on what type of character x is,
+// ie whitespace might be 0, alphanumeric 1, etc.
+// Only promises are that:
+// a) Every char has a group
+// b) space is group 0
+// c) The groups are decided at compile time.
+int get_char_group(char x) {
+    if (isspace(x)) {
+        return 0;
+    } else if (isalnum(x)) {
+        return 1;
+    } else if (ispunct(x)) {
+        return 2;
+    } else {
+        return 3;
+    }
+}
+
 // For regular printable keys,
 // ctrl+key returns key-96
 // returns:
@@ -265,6 +284,82 @@ int type_line_helper(Buffer* left, Buffer* right, char out_buf[]) {
                         return -1;
                     }
                 }
+            } else if (k == (key_T)C_LEFT) {
+                // when doing ctrl+left, we skip any whitespace on the right,
+                // so starting whitespace
+                int group = get_char_group(' ');
+                // skip spaces
+                while (left->count > 0) {
+                    if (get_char_group(buffer_peekright(left)) != group) {
+                        break;
+                    }
+                    if (buffer_addleft(right, buffer_popright(left)) == -1) {
+                        fprintf(stderr, "\n");
+                        return -1;
+                    }
+                }
+                if (left->count <= 0) {
+                    continue;
+                }
+                // then at least 1 more
+                char current = buffer_popright(left);
+                if (buffer_addleft(right, current) == -1) {
+                    fprintf(stderr, "\n");
+                    return -1;
+                }
+                group = get_char_group(current);
+                // then we keep going until we reach a different group
+                while (left->count > 0) {
+                    if (get_char_group(buffer_peekright(left)) != group) {
+                        break;
+                    }
+                    if (buffer_addleft(right, buffer_popright(left)) == -1) {
+                        fprintf(stderr, "\n");
+                        return -1;
+                    }
+                }
+
+            } else if (k == (key_T)C_RIGHT) {
+                if (right->count <= 0) {
+                    continue;
+                }
+                // whenever you press ctrl-right, it always moves at least one
+                // character right unless at the end
+                char current = buffer_popleft(right);
+                if (buffer_addright(left, current) == -1) {
+                    fprintf(stderr, "\n");
+                    return -1;
+                }
+                int group = get_char_group(current);
+                // we keep moving to the right until we get to the end of the
+                // current input...
+                while (right->count > 0) {
+                    // ... or until we get to a different type of character.
+                    // If the input is
+                    //     |asdfasdf asdf
+                    // and you press ctrl-right, we move the cursor right
+                    // until the input is
+                    //     asdfasdf| asdf
+                    // current = get_char_group(buffer_peekleft(right));
+                    if (get_char_group(buffer_peekleft(right)) != group) {
+                        break;
+                    }
+                    if (buffer_addright(left, buffer_popleft(right)) == -1) {
+                        fprintf(stderr, "\n");
+                        return -1;
+                    }
+                }
+                // then finally we skip any spaces
+                group = get_char_group(' ');
+                while (right->count > 0) {
+                    if (get_char_group(buffer_peekleft(right)) != group) {
+                        break;
+                    }
+                    if (buffer_addright(left, buffer_popleft(right)) == -1) {
+                        fprintf(stderr, "\n");
+                        return -1;
+                    }
+                }
             } else if (k == (key_T)HOME) {
                 while (left->count > 0) {
                     if (buffer_addleft(right, buffer_popright(left)) == -1) {
@@ -282,30 +377,22 @@ int type_line_helper(Buffer* left, Buffer* right, char out_buf[]) {
             } else if (k == (key_T)DEL) {
                 buffer_popleft(right);
             } else if (k == (key_T)UP) {
-                // printf("up\n");
                 if (!prev_line()) {
                     continue;
                 }
-                if (at_last()) {// && prev_line()) {
+                if (at_last()) {
                     tmp_hist_available = 1;
                     // printf("  at bottom\n  set_tmp_hist\n  read_hist_line\n");
-                    // add_to_history(left, right, out_buf);
                     set_tmp_hist(left, right, out_buf);
                     read_hist_line(left, right);
-                // } else if (prev_line()) {
                 } else {
-                    // printf("  else if prev_line went through\n");
                     read_hist_line(left, right);
                 }
             } else if (k == (key_T)DOWN) {
-                // printf("down, at_last: %d\n", at_last());
                 if (!at_last()) {
-                    // printf("  not at bottom\n");
                     if (next_line()) {
-                        // printf("  next_line went through\n");
                         read_hist_line(left, right);
                     } else if (tmp_hist_available && tmp_hist_exists()) {
-                        // printf("  tmp_hist_exists went through\n");
                         tmp_hist_available = 0;
                         restore_tmp_hist(left);
                         latest_line();
