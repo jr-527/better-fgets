@@ -310,14 +310,15 @@ int type_line_helper(Buffer* left, Buffer* right, char out_buf[]) {
                     return -1;
                 }
             }
-        } else if (k == (key_T)C_RIGHT) {
+        } else if (k == (key_T)C_RIGHT || k == (key_T)C_DEL) {
             if (right->count <= 0) {
                 continue;
             }
+            int add_back = (k == (key_T)C_RIGHT);
             // whenever you press ctrl-right, it always moves at least one
             // character right unless at the end
             char current = buffer_popleft(right);
-            if (buffer_addright(left, current) == -1) {
+            if (add_back && buffer_addright(left, current) == -1) {
                 fprintf(stderr, "\n");
                 return -1;
             }
@@ -335,20 +336,26 @@ int type_line_helper(Buffer* left, Buffer* right, char out_buf[]) {
                 if (get_char_group(buffer_peekleft(right)) != group) {
                     break;
                 }
-                if (buffer_addright(left, buffer_popleft(right)) == -1) {
+                char tmp = buffer_popleft(right);
+                if (add_back && buffer_addright(left, tmp) == -1) {
                     fprintf(stderr, "\n");
                     return -1;
                 }
             }
             // then finally we skip any spaces
-            group = get_char_group(' ');
-            while (right->count > 0) {
-                if (get_char_group(buffer_peekleft(right)) != group) {
-                    break;
-                }
-                if (buffer_addright(left, buffer_popleft(right)) == -1) {
-                    fprintf(stderr, "\n");
-                    return -1;
+            if (add_back) {
+                // when we do ctrl-del, we don't want to remove spaces, ie
+                // ab|cd efgh -> ab| asdf
+                // instead of ab|asdf
+                group = get_char_group(' ');
+                while (right->count > 0) {
+                    if (get_char_group(buffer_peekleft(right)) != group) {
+                        break;
+                    }
+                    if (buffer_addright(left, buffer_popleft(right)) == -1) {
+                        fprintf(stderr, "\n");
+                        return -1;
+                    }
                 }
             }
         } else if (k == (key_T)HOME) {
@@ -429,9 +436,6 @@ int type_line(char out[]) {
     }
     int n = buffer_to_string(&left, out);
     buffer_to_string(&right, out+n);
-    if ((n==2 && !strncmp(":q",out,n)) || (n==3 && !strncmp(":q!",out,n))) {
-        return -3;
-    }
     return return_code;
 }
 
